@@ -21,7 +21,7 @@ def usage():
 Usage: bhnet.py -t target_host -p port
     -l --listen              - listen on [host]:[port] for
                                incoming cinnections
-    -e --execute=file_to_run - excute the given file upon
+    -e --execute=file_to_run - execute the given file upon
                                receiving a connection
     -c command               - initialize a command shell
     -u --upload=destination  - upon receiving connection upload a
@@ -40,19 +40,20 @@ Examples:
 def main():
     global listen
     global port
-    global excute
+    global execute
     global command
     global upload_destination
     global target
-    
+
     if not len(sys.argv[1:]):
         usage()
 
+    # read commandline option
     try:
-        opts, args = getopt(
+        opts, args = getopt.getopt(
                 sys.argv[1:],
                 "hle:t:p:cu:",
-                ["help", "listen", "excute=", "target=",
+                ["help", "listen", "execute=", "target=",
                  "port=", "command", "upload="])
     except getopt.GetoptError as err:
         print(str(err))
@@ -60,11 +61,11 @@ def main():
 
     for o, a in opts:
         if o in ("-h", "--help"):
-            usage() 
+            usage()
         elif o in ("-l", "--listen"):
             listen = True
         elif o in ("-e", "--execute"):
-            excute = a
+            execute = a
         elif o in ("-c", "--commandshell"):
             command = True
         elif o in ("-u", "--upload"):
@@ -91,14 +92,14 @@ def main():
     if listen:
         server_loop()
 
-main()
-
 def client_sender(buffer):
+
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     try:
         #connect to target host
         client.connect((target, port))
+
         if len(buffer):
             client.send(buffer)
 
@@ -107,11 +108,11 @@ def client_sender(buffer):
             recv_len = 1
             response = ""
 
-            while recv_len():
+            while recv_len:
                 data = client.recv(4096)
                 recv_len = len(data)
                 response += data
-                
+
                 if recv_len < 4096:
                     break
 
@@ -134,10 +135,13 @@ def server_loop():
     global target
 
     #if it doedn't appoint waiting IP address, wait connection at all interface
+
     if not len(target):
         target = "0.0.0.0"
+
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((target, port))
+
     server.listen(5)
 
     while True:
@@ -147,6 +151,8 @@ def server_loop():
         client_thread = threading.Thread(
                 target=client_handler, args=(client_socket,))
         client_thread.start()
+
+
 
 def run_command(command):
     #delete last linefeed of string
@@ -187,20 +193,20 @@ def client_handler(client_socket):
             file_descriptor = open(upload_destination,"wb")
             file_descriptor.write(file_buffer)
             file_descriptor.close()
-            
+
             #inform succeeded or failed of writing to file
             client_socket.send(
-                    "Successfully saved file to %s\r\n" % upload_destination)
+                "Successfully saved file to %s\r\n" % upload_destination)
         except:
             client_socket.send(
-                    "Failed to save file to %s\r\n" % upload_destination)
+                "Failed to save file to %s\r\n" % upload_destination)
 
-    #check whether or not appoint excuting command
+    #check whether or not appoint executing command
     if len(execute):
 
         #execute command
-        output = runn_command(execute)
-        
+        output = run_command(execute)
+
         client_socket.send(output)
 
     #process the case of appointing executing commandshell
@@ -216,7 +222,7 @@ def client_handler(client_socket):
             cmd_buffer = ""
             while "\n" not in cmd_buffer:
                 cmd_buffer += client_socket.recv(1024)
-            
+
             #get result of the command
             response = run_command(cmd_buffer)
             response += prompt
@@ -224,3 +230,4 @@ def client_handler(client_socket):
             #submit result of the command
             client_socket.send(response)
 
+main()
